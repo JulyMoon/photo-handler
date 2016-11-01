@@ -1,7 +1,9 @@
 #require 'set'
 require 'digest'
+require 'exifr'
 
 Photos_dir = 'E:/cassiopeia/photos'
+Extensions = { photo: %w(jpg jpeg), video: %w(mp4 avi 3gp) }
 
 file_paths = Dir[File.join(Photos_dir, '**', '*')].reject { |path| File.directory? path }
 
@@ -54,4 +56,17 @@ sizes.each do |size, paths_i|
     end
 end
 
+files = Hash.new { |h, k| h[k] = [] }
+unique_files.each do |path|
+    extension = File.extname(path)[1..-1].downcase
+    Extensions.each do |type, extensions|
+        if extensions.include? extension
+            files[type] << path
+            break
+        end
+    end
+end
+
 puts "all file count: #{file_paths.count}", "unique file count: #{unique_files.count}"
+files.each { |type, paths| puts "#{type}: #{paths.count}" }
+
