@@ -50,8 +50,7 @@ sizes.each do |size, paths_i|
             unique_files << paths_j.first
             next
         end
-        #todo: add the files that was modified the earliest
-        unique_files << paths_j.first
+        unique_files << paths_j.min_by { |path| File.stat(path).mtime }
     end
 end
 
