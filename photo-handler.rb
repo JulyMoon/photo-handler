@@ -56,17 +56,28 @@ sizes.each do |size, paths_i|
     end
 end
 
-files = Hash.new { |h, k| h[k] = [] }
+puts "all file count: #{file_paths.count}", "unique file count: #{unique_files.count}"
+
+files_by_type = Hash.new { |h, k| h[k] = [] }
 unique_files.each do |path|
     extension = File.extname(path)[1..-1].downcase
     Extensions.each do |type, extensions|
         if extensions.include? extension
-            files[type] << path
+            files_by_type[type] << path
             break
         end
     end
 end
 
-puts "all file count: #{file_paths.count}", "unique file count: #{unique_files.count}"
-files.each { |type, paths| puts "#{type}: #{paths.count}" }
+files_by_type.each { |type, paths| puts "#{type}: #{paths.count}" }
 
+photos_by_cam = Hash.new { |h, k| h[k] = [] }
+files_by_type[:photo].each.with_index do |path, index|
+    puts "#{index + 1}/#{files_by_type[:photo].count}"
+    exif = EXIFR::JPEG.new path
+    photos_by_cam["#{exif.make} #{exif.model}"] << path
+end
+
+#EXIFR::JPEG.new(files_by_type[:photo].first).to_hash.each { |key, value| puts "#{key}: #{value}" }
+
+photos_by_cam.each { |model, paths| puts "#{model}: #{paths.count}" }
