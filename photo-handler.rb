@@ -93,7 +93,7 @@ photos_by_cam.each do |cam, photos|
     photos.sort_by! { |photo| photo.time }
 
     out_dir = File.join(Output_dir, cam)
-    FileUtils.mkdir_p(out_dir) unless File.directory?(out_dir)
+    FileUtils.mkdir_p(out_dir)
 
     photos.each.with_index do |photo, index|
         filename = "#{index + 1} #{photo.time.strftime "%a, %b %e, %Y %H-%M"}.jpg"
