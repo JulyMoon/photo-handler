@@ -1,10 +1,14 @@
 #require 'set'
+require 'fileutils'
 require 'digest'
 require 'exifr'
 
 Output_dir = 'E:/media_out'
-Photos_dir = 'E:/cassiopeia/photos'
+Photos_dir = 'E:/cassiopeia/photos_deleteme'
+Convert_path = "E:/cassiopeia/programs/imagemagick/convert.exe"
 Extensions = { photo: %w(jpg jpeg), video: %w(mp4 avi 3gp) }
+PreferredPhotoWidth = 1920
+PreferredPhotoHeight = 1080
 
 file_paths = Dir[File.join(Photos_dir, '**', '*')].reject { |path| File.directory? path }
 
@@ -72,15 +76,40 @@ end
 
 files_by_type.each { |type, paths| puts "#{type}: #{paths.count}" }
 
-Jpg = Struct.new(:path, :metadata)
+Jpg = Struct.new(:path, :metadata, :time)
 
 photos_by_cam = Hash.new { |h, k| h[k] = [] }
 files_by_type[:photo].each.with_index do |path, index|
     puts "#{index + 1}/#{files_by_type[:photo].count}"
-    jpg = Jpg.new(path, EXIFR::JPEG.new(path))
+    jpg = Jpg.new path, EXIFR::JPEG.new(path), File.stat(path).mtime
     photos_by_cam["#{jpg.metadata.make} #{jpg.metadata.model}".gsub(/[\W&&[^ ]]+/, "").scan(/\b\w+\b/).uniq.join " "] << jpg
 end
 
 #EXIFR::JPEG.new(files_by_type[:photo].first).to_hash.each { |key, value| puts "#{key}: #{value}" }
 
-photos_by_cam.each { |model, jpgs| puts "#{model}: #{jpgs.count}" }
+photos_by_cam.each do |cam, photos|
+    puts "#{cam}: #{photos.count}"
+
+    photos.sort_by! { |photo| photo.time }
+
+    out_dir = File.join(Output_dir, cam)
+    FileUtils.mkdir_p(out_dir) unless File.directory?(out_dir)
+
+    photos.each.with_index do |photo, index|
+        filename = "#{index + 1} #{photo.time.strftime "%a, %b %e, %Y %H-%M"}.jpg"
+        out_path = File.join(out_dir, filename)
+        
+        if photo.metadata.width > PreferredPhotoWidth && photo.metadata.height > PreferredPhotoHeight
+            resize_arg = "-resize " + if photo.metadata.width > photo.metadata.height
+                                          "x#{PreferredPhotoHeight}"
+                                      else
+                                          PreferredPhotoWidth
+                                      end
+            system(%{"#{Convert_path}" "#{photo.path}" #{resize_arg} "#{out_path}"})
+        else
+            FileUtils.cp photo.path, out_path
+        end
+
+        File.utime File.atime(photo.path), photo.time, out_path
+    end
+end
