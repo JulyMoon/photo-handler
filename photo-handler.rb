@@ -2,6 +2,7 @@
 require 'digest'
 require 'exifr'
 
+Output_dir = 'E:/media_out'
 Photos_dir = 'E:/cassiopeia/photos'
 Extensions = { photo: %w(jpg jpeg), video: %w(mp4 avi 3gp) }
 
@@ -71,13 +72,15 @@ end
 
 files_by_type.each { |type, paths| puts "#{type}: #{paths.count}" }
 
+Jpg = Struct.new(:path, :metadata)
+
 photos_by_cam = Hash.new { |h, k| h[k] = [] }
 files_by_type[:photo].each.with_index do |path, index|
     puts "#{index + 1}/#{files_by_type[:photo].count}"
-    exif = EXIFR::JPEG.new path
-    photos_by_cam["#{exif.make} #{exif.model}"] << path
+    jpg = Jpg.new(path, EXIFR::JPEG.new(path))
+    photos_by_cam["#{jpg.metadata.make} #{jpg.metadata.model}".gsub(/[\W&&[^ ]]+/, "").scan(/\b\w+\b/).uniq.join " "] << jpg
 end
 
 #EXIFR::JPEG.new(files_by_type[:photo].first).to_hash.each { |key, value| puts "#{key}: #{value}" }
 
-photos_by_cam.each { |model, paths| puts "#{model}: #{paths.count}" }
+photos_by_cam.each { |model, jpgs| puts "#{model}: #{jpgs.count}" }
