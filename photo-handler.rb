@@ -14,6 +14,8 @@ PREFERRED_PHOTO_HEIGHT = 1080
 FILENAME_FORMAT = "%a, %b %0e, %Y %H-%M" # Sun, Nov 05, 2016 13:37
 FILENAME_FORMAT_INCLUDE_INDEX = true
 
+VIDEO_DIR_NAME = "videos"
+
 EXTENSION_WORD = "Extension"
 FILE_COUNT_WORD = "Number"
 SIZE_WORD = "Size"
@@ -22,6 +24,7 @@ TOTAL_WORD = "TOTAL"
 
 ALIGN_TABLE = [:center, :right, :right]
 
+FileUtils.mkdir_p OUTPUT_DIR
 fail "ERROR: The output directory already contains files" if Dir.new(OUTPUT_DIR).count > 2
 
 print "Scanning for files..."
@@ -96,6 +99,18 @@ table = Terminal::Table.new :headings => [MEDIA_TYPE_WORD, FILE_COUNT_WORD, SIZE
 ALIGN_TABLE.each.with_index { |align, index| table.align_column index, align }
 puts table
 
+puts "Handling videos..."
+out_dir = File.join(OUTPUT_DIR, VIDEO_DIR_NAME)
+FileUtils.mkdir_p out_dir
+files_by_type[:video].each.with_index do |file, index|
+    print "#{index + 1}/#{files_by_type[:video].count}"
+    filename = " #{FILENAME_FORMAT_INCLUDE_INDEX ? "#{index + 1} " : ""}#{file.stats.mtime.strftime FILENAME_FORMAT}#{File.extname(file.path).downcase}"
+    puts "#{filename} #{format_size file.stats.size}"
+    out_path = File.join out_dir, filename
+    FileUtils.cp file.path, out_path
+    File.utime File.atime(file.path), file.stats.mtime, out_path
+end
+
 Jpg = Struct.new :file, :metadata
 
 print "Collecting photo metadata..."
@@ -107,14 +122,14 @@ files_by_type[:photo].each.with_index do |file, index|
 end
 puts " Done"
 
-puts "Handling files..."
+puts "Handling photos..."
 count = photos_by_cam.map { |cam, photos| photos.count }.inject(:+)
 i = 0
 photos_by_cam.each do |cam, photos|
     photos.sort_by! { |photo| photo.file.stats.mtime }
 
-    out_dir = File.join(OUTPUT_DIR, cam)
-    FileUtils.mkdir_p(out_dir)
+    out_dir = File.join OUTPUT_DIR, cam
+    FileUtils.mkdir_p out_dir
 
     photos.each.with_index do |photo, index|
         print "#{i += 1}/#{count}"
