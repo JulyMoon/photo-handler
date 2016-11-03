@@ -9,6 +9,8 @@ CONVERT_PATH = "E:/cassiopeia/programs/imagemagick/convert.exe"
 MEDIA_EXTENSIONS = { photo: %w(jpg jpeg), video: %w(mp4 avi 3gp) }
 PREFERRED_PHOTO_WIDTH = 1920
 PREFERRED_PHOTO_HEIGHT = 1080
+FILENAME_FORMAT = "%a, %b %0e, %Y %H-%M" # Sun, Nov 05, 2016 13:37
+FILENAME_FORMAT_INCLUDE_INDEX = true
 
 fail "ERROR: The output directory already contains files" if Dir.new(OUTPUT_DIR).count > 2
 
@@ -102,7 +104,7 @@ photos_by_cam.each do |cam, photos|
     photos.each.with_index do |photo, index|
         puts "#{i += 1}/#{count}"
 
-        filename = "#{index + 1} #{photo.time.strftime "%a, %b %0e, %Y %H-%M"}.jpg"
+        filename = "#{FILENAME_FORMAT_INCLUDE_INDEX ? "#{index + 1} " : ""}#{photo.time.strftime FILENAME_FORMAT}.jpg"
         out_path = File.join(out_dir, filename)
         
         if photo.metadata.width > PREFERRED_PHOTO_WIDTH && photo.metadata.height > PREFERRED_PHOTO_HEIGHT
