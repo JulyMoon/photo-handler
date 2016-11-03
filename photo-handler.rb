@@ -3,14 +3,16 @@ require 'fileutils'
 require 'digest'
 require 'exifr'
 
-Output_dir = 'E:/media_out'
-Photos_dir = 'E:/cassiopeia/photos_deleteme'
-Convert_path = "E:/cassiopeia/programs/imagemagick/convert.exe"
-Extensions = { photo: %w(jpg jpeg), video: %w(mp4 avi 3gp) }
-PreferredPhotoWidth = 1920
-PreferredPhotoHeight = 1080
+OUTPUT_DIR = 'E:/media_out'
+PHOTO_DIR = 'E:/cassiopeia/photos_deleteme'
+CONVERT_PATH = "E:/cassiopeia/programs/imagemagick/convert.exe"
+MEDIA_EXTENSIONS = { photo: %w(jpg jpeg), video: %w(mp4 avi 3gp) }
+PREFERRED_PHOTO_WIDTH = 1920
+PREFERRED_PHOTO_HEIGHT = 1080
 
-file_paths = Dir[File.join(Photos_dir, '**', '*')].reject { |path| File.directory? path }
+fail "ERROR: The output directory already contains files" if Dir.new(OUTPUT_DIR).count > 2
+
+file_paths = Dir[File.join(PHOTO_DIR, '**', '*')].reject { |path| File.directory? path }
 
 #extensions = Hash.new { |h, k| h[k] = [] }
 sizes = Hash.new { |h, k| h[k] = [] }
@@ -66,7 +68,7 @@ puts "all file count: #{file_paths.count}", "unique file count: #{unique_files.c
 files_by_type = Hash.new { |h, k| h[k] = [] }
 unique_files.each do |path|
     extension = File.extname(path)[1..-1].downcase
-    Extensions.each do |type, extensions|
+    MEDIA_EXTENSIONS.each do |type, extensions|
         if extensions.include? extension
             files_by_type[type] << path
             break
@@ -94,7 +96,7 @@ photos_by_cam.each do |cam, photos|
 
     photos.sort_by! { |photo| photo.time }
 
-    out_dir = File.join(Output_dir, cam)
+    out_dir = File.join(OUTPUT_DIR, cam)
     FileUtils.mkdir_p(out_dir)
 
     photos.each.with_index do |photo, index|
@@ -103,13 +105,13 @@ photos_by_cam.each do |cam, photos|
         filename = "#{index + 1} #{photo.time.strftime "%a, %b %0e, %Y %H-%M"}.jpg"
         out_path = File.join(out_dir, filename)
         
-        if photo.metadata.width > PreferredPhotoWidth && photo.metadata.height > PreferredPhotoHeight
+        if photo.metadata.width > PREFERRED_PHOTO_WIDTH && photo.metadata.height > PREFERRED_PHOTO_HEIGHT
             resize_arg = "-resize " + if photo.metadata.width > photo.metadata.height
-                                          "x#{PreferredPhotoHeight}"
+                                          "x#{PREFERRED_PHOTO_HEIGHT}"
                                       else
-                                          PreferredPhotoWidth
+                                          PREFERRED_PHOTO_WIDTH
                                       end
-            system(%{"#{Convert_path}" "#{photo.path}" #{resize_arg} "#{out_path}"})
+            system(%{"#{CONVERT_PATH}" "#{photo.path}" #{resize_arg} "#{out_path}"})
         else
             FileUtils.cp photo.path, out_path
         end
