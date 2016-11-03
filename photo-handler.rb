@@ -107,7 +107,7 @@ files_by_type[:photo].each.with_index do |file, index|
 end
 puts " Done"
 
-print "Handling files..."
+puts "Handling files..."
 count = photos_by_cam.map { |cam, photos| photos.count }.inject(:+)
 i = 0
 photos_by_cam.each do |cam, photos|
@@ -117,23 +117,26 @@ photos_by_cam.each do |cam, photos|
     FileUtils.mkdir_p(out_dir)
 
     photos.each.with_index do |photo, index|
-        puts "#{i += 1}/#{count}"
+        print "#{i += 1}/#{count}"
 
         filename = "#{FILENAME_FORMAT_INCLUDE_INDEX ? "#{index + 1} " : ""}#{photo.file.stats.mtime.strftime FILENAME_FORMAT}.jpg"
+        print " #{File.join cam, filename}"
         out_path = File.join(out_dir, filename)
         
         if photo.metadata.width > PREFERRED_PHOTO_WIDTH && photo.metadata.height > PREFERRED_PHOTO_HEIGHT
+            puts " RESIZE"
             resize_arg = "-resize " + if photo.metadata.width > photo.metadata.height
                                           "x#{PREFERRED_PHOTO_HEIGHT}"
                                       else
-                                          PREFERRED_PHOTO_WIDTH
+                                          PREFERRED_PHOTO_WIDTH.to_s
                                       end
             system(%{"#{CONVERT_PATH}" "#{photo.file.path}" #{resize_arg} "#{out_path}"})
         else
+            puts " COPY"
             FileUtils.cp photo.file.path, out_path
         end
 
         File.utime File.atime(photo.file.path), photo.file.stats.mtime, out_path
     end
 end
-puts " Done"
+puts "Done"
