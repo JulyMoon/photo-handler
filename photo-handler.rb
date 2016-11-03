@@ -5,8 +5,8 @@ require 'exifr'
 require 'terminal-table'
 
 OUTPUT_DIR = 'E:/media_out'
-INPUT_DIR = 'E:/cassiopeia/photos_deleteme'
-#INPUT_DIR = 'E:/cassiopeia/photos'
+#INPUT_DIR = 'E:/cassiopeia/photos_deleteme'
+INPUT_DIR = 'E:/cassiopeia/photos'
 CONVERT_PATH = "E:/cassiopeia/programs/imagemagick/convert.exe" # imagemagick's convert.exe
 MEDIA_EXTENSIONS = { photo: %w(jpg jpeg), video: %w(mp4 avi 3gp) }
 PREFERRED_PHOTO_WIDTH = 1920
@@ -17,10 +17,13 @@ FILENAME_FORMAT_INCLUDE_INDEX = true
 EXTENSION_WORD = "Extension"
 FILE_COUNT_WORD = "Number"
 EXTENSION_SIZE_WORD = "Size"
+TOTAL_WORD = "TOTAL"
 
 fail "ERROR: The output directory already contains files" if Dir.new(OUTPUT_DIR).count > 2
 
+print "Scanning for files... "
 file_paths = Dir[File.join(INPUT_DIR, '**', '*')].reject { |path| File.directory? path }
+puts "Done"
 
 def extension_of path
     File.extname(path)[1..-1].downcase
@@ -37,8 +40,14 @@ file_paths.each do |path|
     size_by_ext[ext] += size
 end
 
+def format_size size
+    "%.02f MiB" % (size.to_f / (2**20))
+end
+
 table = Terminal::Table.new :headings => [EXTENSION_WORD, FILE_COUNT_WORD, EXTENSION_SIZE_WORD],
-    :rows => files_by_ext.map { |ext, count| [ext, count, "%.02f MiB" % (size_by_ext[ext].to_f / (2**20))] }
+    :rows => files_by_ext.map { |ext, count| [ext, count, format_size(size_by_ext[ext])] }
+table.add_separator
+table.add_row [TOTAL_WORD, files_by_ext.values.inject(:+), format_size(size_by_ext.values.inject(:+))]
 table.align_column 0, :center
 table.align_column 1, :right
 table.align_column 2, :right
