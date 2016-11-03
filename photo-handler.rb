@@ -80,15 +80,17 @@ Jpg = Struct.new(:path, :metadata, :time)
 
 photos_by_cam = Hash.new { |h, k| h[k] = [] }
 files_by_type[:photo].each.with_index do |path, index|
-    puts "#{index + 1}/#{files_by_type[:photo].count}"
+#    puts "#{index + 1}/#{files_by_type[:photo].count}"
     jpg = Jpg.new path, EXIFR::JPEG.new(path), File.stat(path).mtime
     photos_by_cam["#{jpg.metadata.make} #{jpg.metadata.model}".gsub(/[\W&&[^ ]]+/, "").scan(/\b\w+\b/).uniq.join " "] << jpg
 end
 
 #EXIFR::JPEG.new(files_by_type[:photo].first).to_hash.each { |key, value| puts "#{key}: #{value}" }
 
+count = photos_by_cam.map { |cam, photos| photos.count }.inject(:+)
+i = 0
 photos_by_cam.each do |cam, photos|
-    puts "#{cam}: #{photos.count}"
+#    puts "#{cam}: #{photos.count}"
 
     photos.sort_by! { |photo| photo.time }
 
@@ -96,7 +98,9 @@ photos_by_cam.each do |cam, photos|
     FileUtils.mkdir_p(out_dir)
 
     photos.each.with_index do |photo, index|
-        filename = "#{index + 1} #{photo.time.strftime "%a, %b %e, %Y %H-%M"}.jpg"
+        puts "#{i += 1}/#{count}"
+
+        filename = "#{index + 1} #{photo.time.strftime "%a, %b %0e, %Y %H-%M"}.jpg"
         out_path = File.join(out_dir, filename)
         
         if photo.metadata.width > PreferredPhotoWidth && photo.metadata.height > PreferredPhotoHeight
