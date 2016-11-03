@@ -96,23 +96,22 @@ table = Terminal::Table.new :headings => [MEDIA_TYPE_WORD, FILE_COUNT_WORD, SIZE
 ALIGN_TABLE.each.with_index { |align, index| table.align_column index, align }
 puts table
 
-exit
+Jpg = Struct.new :file, :metadata
 
-files_by_type.each { |type, paths| puts "#{type}: #{paths.count}" }
-
-Jpg = Struct.new :path, :metadata, :time
-
+print "Collecting photo metadata..."
 photos_by_cam = Hash.new { |h, k| h[k] = [] }
-files_by_type[:photo].each.with_index do |path, index|
+files_by_type[:photo].each.with_index do |file, index|
 #    puts "#{index + 1}/#{files_by_type[:photo].count}"
-    jpg = Jpg.new path, EXIFR::JPEG.new(path), File.stat(path).mtime
+    jpg = Jpg.new file, EXIFR::JPEG.new(file.path)
     photos_by_cam["#{jpg.metadata.make} #{jpg.metadata.model}".gsub(/[\W&&[^ ]]+/, "").scan(/\b\w+\b/).uniq.join " "] << jpg
 end
+puts " Done"
 
+print "Handling files..."
 count = photos_by_cam.map { |cam, photos| photos.count }.inject(:+)
 i = 0
 photos_by_cam.each do |cam, photos|
-    photos.sort_by! { |photo| photo.time }
+    photos.sort_by! { |photo| photo.file.stats.mtime }
 
     out_dir = File.join(OUTPUT_DIR, cam)
     FileUtils.mkdir_p(out_dir)
@@ -120,7 +119,7 @@ photos_by_cam.each do |cam, photos|
     photos.each.with_index do |photo, index|
         puts "#{i += 1}/#{count}"
 
-        filename = "#{FILENAME_FORMAT_INCLUDE_INDEX ? "#{index + 1} " : ""}#{photo.time.strftime FILENAME_FORMAT}.jpg"
+        filename = "#{FILENAME_FORMAT_INCLUDE_INDEX ? "#{index + 1} " : ""}#{photo.file.stats.mtime.strftime FILENAME_FORMAT}.jpg"
         out_path = File.join(out_dir, filename)
         
         if photo.metadata.width > PREFERRED_PHOTO_WIDTH && photo.metadata.height > PREFERRED_PHOTO_HEIGHT
@@ -129,11 +128,12 @@ photos_by_cam.each do |cam, photos|
                                       else
                                           PREFERRED_PHOTO_WIDTH
                                       end
-            system(%{"#{CONVERT_PATH}" "#{photo.path}" #{resize_arg} "#{out_path}"})
+            system(%{"#{CONVERT_PATH}" "#{photo.file.path}" #{resize_arg} "#{out_path}"})
         else
-            FileUtils.cp photo.path, out_path
+            FileUtils.cp photo.file.path, out_path
         end
 
-        File.utime File.atime(photo.path), photo.time, out_path
+        File.utime File.atime(photo.file.path), photo.file.stats.mtime, out_path
     end
 end
+puts " Done"
