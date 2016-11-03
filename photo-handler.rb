@@ -2,15 +2,21 @@
 require 'fileutils'
 require 'digest'
 require 'exifr'
+require 'terminal-table'
 
 OUTPUT_DIR = 'E:/media_out'
 INPUT_DIR = 'E:/cassiopeia/photos_deleteme'
+#INPUT_DIR = 'E:/cassiopeia/photos'
 CONVERT_PATH = "E:/cassiopeia/programs/imagemagick/convert.exe" # imagemagick's convert.exe
 MEDIA_EXTENSIONS = { photo: %w(jpg jpeg), video: %w(mp4 avi 3gp) }
 PREFERRED_PHOTO_WIDTH = 1920
 PREFERRED_PHOTO_HEIGHT = 1080
 FILENAME_FORMAT = "%a, %b %0e, %Y %H-%M" # Sun, Nov 05, 2016 13:37
 FILENAME_FORMAT_INCLUDE_INDEX = true
+
+EXTENSION_WORD = "Extension"
+FILE_COUNT_WORD = "Number"
+EXTENSION_SIZE_WORD = "Size"
 
 fail "ERROR: The output directory already contains files" if Dir.new(OUTPUT_DIR).count > 2
 
@@ -31,20 +37,14 @@ file_paths.each do |path|
     size_by_ext[ext] += size
 end
 
-EXTENSION_WORD = "Extension"
-FILE_COUNT_WORD = "File count"
-VERTICAL_SEPARATOR = "|"
-HORIZONTAL_SEPARATOR = "-"
-$EXT_PADDING = (files_by_ext.keys + [EXTENSION_WORD]).map(&:length).max + 2
-$FILECOUNT_PADDING = (files_by_ext.values + [FILE_COUNT_WORD]).map { |value| value.to_s.length }.max + 2
+table = Terminal::Table.new :headings => [EXTENSION_WORD, FILE_COUNT_WORD, EXTENSION_SIZE_WORD],
+    :rows => files_by_ext.map { |ext, count| [ext, count, "%.02f MiB" % (size_by_ext[ext].to_f / (2**20))] }
+table.align_column 0, :center
+table.align_column 1, :right
+table.align_column 2, :right
+puts table
 
-def table_record(key, value)
-    "#{key.to_s.center $EXT_PADDING}#{VERTICAL_SEPARATOR}#{value.to_s.center $FILECOUNT_PADDING}"
-end
-
-table_legend = table_record EXTENSION_WORD, FILE_COUNT_WORD
-puts table_legend, HORIZONTAL_SEPARATOR * table_legend.length
-puts files_by_ext.map { |ext, count| table_record ext, count }.to_a
+sleep 60
 
 #sizes.reject! { |size, paths| paths.length == 1 }
 
