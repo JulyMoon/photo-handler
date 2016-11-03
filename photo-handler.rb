@@ -4,8 +4,8 @@ require 'digest'
 require 'exifr'
 
 OUTPUT_DIR = 'E:/media_out'
-PHOTO_DIR = 'E:/cassiopeia/photos_deleteme'
-CONVERT_PATH = "E:/cassiopeia/programs/imagemagick/convert.exe"
+INPUT_DIR = 'E:/cassiopeia/photos_deleteme'
+CONVERT_PATH = "E:/cassiopeia/programs/imagemagick/convert.exe" # imagemagick's convert.exe
 MEDIA_EXTENSIONS = { photo: %w(jpg jpeg), video: %w(mp4 avi 3gp) }
 PREFERRED_PHOTO_WIDTH = 1920
 PREFERRED_PHOTO_HEIGHT = 1080
@@ -14,14 +14,38 @@ FILENAME_FORMAT_INCLUDE_INDEX = true
 
 fail "ERROR: The output directory already contains files" if Dir.new(OUTPUT_DIR).count > 2
 
-file_paths = Dir[File.join(PHOTO_DIR, '**', '*')].reject { |path| File.directory? path }
+file_paths = Dir[File.join(INPUT_DIR, '**', '*')].reject { |path| File.directory? path }
 
-#extensions = Hash.new { |h, k| h[k] = [] }
-sizes = Hash.new { |h, k| h[k] = [] }
-file_paths.each do |path|
-#    extensions[File.extname(path)[1..-1].downcase].push path
-    sizes[File.size path].push path
+def extension_of path
+    File.extname(path)[1..-1].downcase
 end
+
+files_by_ext = Hash.new 0
+files_by_size = Hash.new { |h, k| h[k] = [] }
+size_by_ext = Hash.new 0
+file_paths.each do |path|
+    size = File.size path
+    ext = extension_of path
+    files_by_size[size] << path
+    files_by_ext[ext] += 1
+    size_by_ext[ext] += size
+end
+
+EXTENSION_WORD = "Extension"
+FILE_COUNT_WORD = "File count"
+VERTICAL_SEPARATOR = "|"
+HORIZONTAL_SEPARATOR = "-"
+$EXT_PADDING = (files_by_ext.keys + [EXTENSION_WORD]).map(&:length).max + 2
+$FILECOUNT_PADDING = (files_by_ext.values + [FILE_COUNT_WORD]).map { |value| value.to_s.length }.max + 2
+
+def table_record(key, value)
+    "#{key.to_s.center $EXT_PADDING}#{VERTICAL_SEPARATOR}#{value.to_s.center $FILECOUNT_PADDING}"
+end
+
+table_legend = table_record EXTENSION_WORD, FILE_COUNT_WORD
+puts table_legend, HORIZONTAL_SEPARATOR * table_legend.length
+puts files_by_ext.map { |ext, count| table_record ext, count }.to_a
+
 #sizes.reject! { |size, paths| paths.length == 1 }
 
 #extensions.each { |extension, paths| puts "#{extension}: #{paths.count}" }
@@ -49,7 +73,7 @@ end
 #end
 
 unique_files = []
-sizes.each do |size, paths_i|
+files_by_size.each do |size, paths_i|
     if paths_i.count == 1
         unique_files << paths_i.first
         next
