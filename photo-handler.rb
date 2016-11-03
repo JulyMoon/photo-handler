@@ -19,6 +19,8 @@ FILE_COUNT_WORD = "Number"
 EXTENSION_SIZE_WORD = "Size"
 TOTAL_WORD = "TOTAL"
 
+ALIGN_TABLE = [:center, :right, :right]
+
 fail "ERROR: The output directory already contains files" if Dir.new(OUTPUT_DIR).count > 2
 
 print "Scanning for files... "
@@ -48,39 +50,10 @@ table = Terminal::Table.new :headings => [EXTENSION_WORD, FILE_COUNT_WORD, EXTEN
     :rows => files_by_ext.map { |ext, count| [ext, count, format_size(size_by_ext[ext])] }
 table.add_separator
 table.add_row [TOTAL_WORD, files_by_ext.values.inject(:+), format_size(size_by_ext.values.inject(:+))]
-table.align_column 0, :center
-table.align_column 1, :right
-table.align_column 2, :right
+ALIGN_TABLE.each.with_index { |align, index| table.align_column index, align }
 puts table
 
-sleep 60
-
-#sizes.reject! { |size, paths| paths.length == 1 }
-
-#extensions.each { |extension, paths| puts "#{extension}: #{paths.count}" }
-#
-#sizes.each do |size, paths|
-#    puts "#{size}:"
-#    paths.each { |path| puts "  - #{path}" }
-#end
-#
-#diff_names = Hash.new
-#sizes.each do |size, paths|
-#    current = Set.new
-#    paths.each do |path_i|
-#        paths.each do |path_j|
-#            next if path_i == path_j
-#            current << path_i << path_j unless File.basename(path_i) == File.basename(path_j)
-#        end
-#    end
-#    diff_names[size] = current unless current.empty?
-#end
-#
-#diff_names.each do |size, paths|
-#    puts "#{size}:"
-#    paths.each { |path| puts "  - #{path}" }
-#end
-
+print "Discarding the duplicates..."
 unique_files = []
 files_by_size.each do |size, paths_i|
     if paths_i.count == 1
@@ -97,6 +70,9 @@ files_by_size.each do |size, paths_i|
         unique_files << paths_j.min_by { |path| File.stat(path).mtime }
     end
 end
+puts " Done"
+
+exit
 
 puts "all file count: #{file_paths.count}", "unique file count: #{unique_files.count}"
 
