@@ -4,6 +4,7 @@ require 'digest'
 require 'exifr'
 require 'terminal-table'
 
+RESIZE_COMPRESSION = false
 OUTPUT_DIR = 'E:/media_out'
 #INPUT_DIR = 'E:/cassiopeia/photos_deleteme'
 INPUT_DIR = 'E:/cassiopeia/photos'
@@ -102,21 +103,23 @@ puts table
 puts "Handling videos..."
 out_dir = File.join(OUTPUT_DIR, VIDEO_DIR_NAME)
 FileUtils.mkdir_p out_dir
+files_by_type[:video].sort_by! { |file| file.stats.mtime }
 files_by_type[:video].each.with_index do |file, index|
     print "#{index + 1}/#{files_by_type[:video].count}"
-    filename = " #{FILENAME_FORMAT_INCLUDE_INDEX ? "#{index + 1} " : ""}#{file.stats.mtime.strftime FILENAME_FORMAT}#{File.extname(file.path).downcase}"
-    puts "#{filename} #{format_size file.stats.size}"
+#    filename = " #{FILENAME_FORMAT_INCLUDE_INDEX ? "#{index + 1} " : ""}#{file.stats.mtime.strftime FILENAME_FORMAT}#{File.extname(file.path).downcase}"
+    filename = File.basename file.path
+    puts " #{filename} #{format_size file.stats.size} #{file.stats.mtime.strftime FILENAME_FORMAT}"
     out_path = File.join out_dir, filename
     FileUtils.cp file.path, out_path
-    File.utime File.atime(file.path), file.stats.mtime, out_path
+    File.utime file.stats.atime, file.stats.mtime, out_path
 end
+puts "Done"
 
 Jpg = Struct.new :file, :metadata
 
 print "Collecting photo metadata..."
 photos_by_cam = Hash.new { |h, k| h[k] = [] }
 files_by_type[:photo].each.with_index do |file, index|
-#    puts "#{index + 1}/#{files_by_type[:photo].count}"
     jpg = Jpg.new file, EXIFR::JPEG.new(file.path)
     photos_by_cam["#{jpg.metadata.make} #{jpg.metadata.model}".gsub(/[\W&&[^ ]]+/, "").scan(/\b\w+\b/).uniq.join " "] << jpg
 end
@@ -138,7 +141,7 @@ photos_by_cam.each do |cam, photos|
         print " #{File.join cam, filename}"
         out_path = File.join(out_dir, filename)
         
-        if photo.metadata.width > PREFERRED_PHOTO_WIDTH && photo.metadata.height > PREFERRED_PHOTO_HEIGHT
+        if RESIZE_COMPRESSION && photo.metadata.width > PREFERRED_PHOTO_WIDTH && photo.metadata.height > PREFERRED_PHOTO_HEIGHT
             puts " RESIZE"
             resize_arg = "-resize " + if photo.metadata.width > photo.metadata.height
                                           "x#{PREFERRED_PHOTO_HEIGHT}"
@@ -151,7 +154,7 @@ photos_by_cam.each do |cam, photos|
             FileUtils.cp photo.file.path, out_path
         end
 
-        File.utime File.atime(photo.file.path), photo.file.stats.mtime, out_path
+        File.utime photo.file.stats.atime, photo.file.stats.mtime, out_path
     end
 end
 puts "Done"
