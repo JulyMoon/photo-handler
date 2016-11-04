@@ -12,10 +12,11 @@ CONVERT_PATH = "E:/cassiopeia/programs/imagemagick/convert.exe" # imagemagick's 
 MEDIA_EXTENSIONS = { photo: %w(jpg jpeg), video: %w(mp4 avi 3gp) }
 PREFERRED_PHOTO_WIDTH = 1920
 PREFERRED_PHOTO_HEIGHT = 1080
-FILENAME_FORMAT = "%a, %b %0e, %Y %H-%M" # Sun, Nov 05, 2016 13:37
+FILENAME_FORMAT = "%a, %b %0e, %Y %H-%M" # Sun, Nov 05, 2016 13-37
 FILENAME_FORMAT_INCLUDE_INDEX = true
 
 VIDEO_DIR_NAME = "videos"
+PHOTO_DIR_NAME = "photos"
 
 EXTENSION_WORD = "Extension"
 FILE_COUNT_WORD = "Number"
@@ -103,15 +104,14 @@ puts table
 puts "Handling videos..."
 out_dir = File.join(OUTPUT_DIR, VIDEO_DIR_NAME)
 FileUtils.mkdir_p out_dir
-files_by_type[:video].sort_by! { |file| file.stats.mtime }
-files_by_type[:video].each.with_index do |file, index|
-    print "#{index + 1}/#{files_by_type[:video].count}"
+files_by_type[:video].sort_by! { |video| video.stats.mtime }
+files_by_type[:video].each.with_index do |video, index|
 #    filename = " #{FILENAME_FORMAT_INCLUDE_INDEX ? "#{index + 1} " : ""}#{file.stats.mtime.strftime FILENAME_FORMAT}#{File.extname(file.path).downcase}"
-    filename = File.basename file.path
-    puts " #{filename} #{format_size file.stats.size} #{file.stats.mtime.strftime FILENAME_FORMAT}"
+    filename = File.basename video.path
     out_path = File.join out_dir, filename
-    FileUtils.cp file.path, out_path
-    File.utime file.stats.atime, file.stats.mtime, out_path
+    puts "#{index + 1}/#{files_by_type[:video].count} #{filename} #{video.stats.mtime.strftime FILENAME_FORMAT} #{format_size video.stats.size}"
+    FileUtils.cp video.path, out_path
+    File.utime video.stats.atime, video.stats.mtime, out_path
 end
 puts "Done"
 
@@ -126,19 +126,16 @@ end
 puts " Done"
 
 puts "Handling photos..."
-count = photos_by_cam.map { |cam, photos| photos.count }.inject(:+)
 i = 0
 photos_by_cam.each do |cam, photos|
     photos.sort_by! { |photo| photo.file.stats.mtime }
 
-    out_dir = File.join OUTPUT_DIR, cam
+    out_dir = File.join OUTPUT_DIR, PHOTO_DIR_NAME, cam
     FileUtils.mkdir_p out_dir
 
     photos.each.with_index do |photo, index|
-        print "#{i += 1}/#{count}"
-
         filename = "#{FILENAME_FORMAT_INCLUDE_INDEX ? "#{index + 1} " : ""}#{photo.file.stats.mtime.strftime FILENAME_FORMAT}.jpg"
-        print " #{File.join cam, filename}"
+        print "#{i += 1}/#{files_by_type[:photo].count} #{File.join cam, filename}"
         out_path = File.join(out_dir, filename)
         
         if RESIZE_COMPRESSION && photo.metadata.width > PREFERRED_PHOTO_WIDTH && photo.metadata.height > PREFERRED_PHOTO_HEIGHT
